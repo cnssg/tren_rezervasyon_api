@@ -1,0 +1,48 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/rezervasyon', methods=['POST'])
+def rezervasyon_yap():
+    # İstek verilerini alma
+    request_data = request.json
+    tren = request_data['Tren']
+    rezervasyon_kisi_sayisi = request_data['RezervasyonYapilacakKisiSayisi']
+    kisiler_farkli_vagonlara_yerlestirilebilir = request_data['KisilerFarkliVagonlaraYerlestirilebilir']
+    
+    # Vagonları kontrol etme ve rezervasyon yapma
+    rezervasyon_yapilabilir, yerlesim_ayrinti = rezervasyonu_kontrol_et(tren, rezervasyon_kisi_sayisi, kisiler_farkli_vagonlara_yerlestirilebilir)
+    
+    # Yanıt oluşturma
+    response = {
+        "RezervasyonYapilabilir": rezervasyon_yapilabilir,
+        "YerlesimAyrinti": yerlesim_ayrinti
+    }
+    
+    return jsonify(response)
+
+def rezervasyonu_kontrol_et(tren, rezervasyon_kisi_sayisi, kisiler_farkli_vagonlara_yerlestirilebilir):
+    vagonlar = tren['Vagonlar']
+    yerlesim_ayrinti = []
+    
+    for vagon in vagonlar:
+        kalan_kapasite = vagon['Kapasite'] - vagon['DoluKoltukAdet']
+        
+        if kisiler_farkli_vagonlara_yerlestirilebilir and kalan_kapasite >= rezervasyon_kisi_sayisi:
+            yerlesim_ayrinti.append({
+                "VagonAdi": vagon['Ad'],
+                "KisiSayisi": rezervasyon_kisi_sayisi
+            })
+            return True, yerlesim_ayrinti
+        
+        if not kisiler_farkli_vagonlara_yerlestirilebilir and kalan_kapasite >= rezervasyon_kisi_sayisi:
+            yerlesim_ayrinti.append({
+                "VagonAdi": vagon['Ad'],
+                "KisiSayisi": rezervasyon_kisi_sayisi
+            })
+            return True, yerlesim_ayrinti
+    
+    return False, yerlesim_ayrinti
+
+if __name__ == '__main__':
+    app.run()
